@@ -118,7 +118,7 @@ class TestWikiJSClient:
 
         client._execute_query = AsyncMock(return_value=search_response)
 
-        results = await client.search_pages("test query", 5)
+        results = await client.search_pages("test query", 5, locale="en")
 
         assert len(results) == 1
         assert results[0]["title"] == "Test Page"
@@ -156,7 +156,7 @@ class TestWikiJSClient:
 
         client._execute_query = AsyncMock(return_value=search_response)
 
-        results = await client.search_pages("test query", 5)
+        results = await client.search_pages("test query", 5, locale="en")
 
         # Should return only 5 results due to manual limit application
         assert len(results) == 5
@@ -170,7 +170,7 @@ class TestWikiJSClient:
         empty_response = {"pages": {"search": {"results": []}}}
         client._execute_query = AsyncMock(return_value=empty_response)
 
-        results = await client.search_pages("nonexistent")
+        results = await client.search_pages("nonexistent", locale="en")
 
         assert results == []
 
@@ -198,7 +198,7 @@ class TestWikiJSClient:
         page_response = {"pages": {"singleByPath": enhanced_page_data}}
         client._execute_query = AsyncMock(return_value=page_response)
 
-        result = await client.get_page_by_path("docs/test-page")
+        result = await client.get_page_by_path("docs/test-page", locale="en")
 
         assert result == enhanced_page_data
         assert result["title"] == "Test Page"
@@ -235,7 +235,7 @@ class TestWikiJSClient:
         not_found_response = {"pages": {"singleByPath": None}}
         client._execute_query = AsyncMock(return_value=not_found_response)
 
-        result = await client.get_page_by_path("nonexistent")
+        result = await client.get_page_by_path("nonexistent", locale="en")
 
         assert result is None
 
@@ -317,7 +317,7 @@ class TestWikiJSClient:
 
         client._execute_query = AsyncMock(return_value=tree_response)
 
-        result = await client.get_page_tree("docs", "ALL")
+        result = await client.get_page_tree("en", "docs", "ALL")
 
         assert len(result) == 1
         assert result[0]["isFolder"] is True
@@ -366,7 +366,7 @@ class TestWikiJSClient:
         tree_response = {"pages": {"tree": []}}
         client._execute_query = AsyncMock(return_value=tree_response)
 
-        result = await client.get_page_tree()
+        result = await client.get_page_tree(locale="en")
 
         assert result == []
 
@@ -405,6 +405,7 @@ class TestWikiJSClient:
             path="docs/new-page",
             title="New Page",
             content="# New Page\n\nContent here",
+            locale="en",
             description="A new page",
             tags=["test", "new"],
         )
@@ -494,7 +495,7 @@ class TestWikiJSClient:
         client._execute_query = AsyncMock(return_value=failed_response)
 
         with pytest.raises(Exception, match="Failed to create page"):
-            await client.create_page("docs/fail", "Fail", "content")
+            await client.create_page("docs/fail", "Fail", "content", "en")
 
     async def test_update_page_success(self, mock_wiki_config):
         """Test successful page update with enhanced parameter handling."""
@@ -762,7 +763,7 @@ class TestWikiJSClient:
 
         client._execute_query = AsyncMock(return_value=move_response)
 
-        result = await client.move_page(456, "docs/moved-page")
+        result = await client.move_page(456, "docs/moved-page", "en")
 
         assert result == move_response["pages"]["move"]
 
@@ -790,7 +791,7 @@ class TestWikiJSClient:
         client._execute_query = AsyncMock(return_value=failed_response)
 
         with pytest.raises(Exception, match="Failed to move page: Page not found"):
-            await client.move_page(999, "docs/nonexistent")
+            await client.move_page(999, "docs/nonexistent", "en")
 
     # --- metadata_only tests ---
 
@@ -801,7 +802,7 @@ class TestWikiJSClient:
         page_response = {"pages": {"singleByPath": {"id": 1, "title": "Test"}}}
         client._execute_query = AsyncMock(return_value=page_response)
 
-        await client.get_page_by_path("docs/test", metadata_only=True)
+        await client.get_page_by_path("docs/test", locale="en", metadata_only=True)
 
         call_args = client._execute_query.call_args
         query = call_args[0][0]
@@ -837,7 +838,7 @@ class TestWikiJSClient:
         page_response = {"pages": {"singleByPath": {"id": 1, "title": "Test"}}}
         client._execute_query = AsyncMock(return_value=page_response)
 
-        await client.get_page_by_path("docs/test")
+        await client.get_page_by_path("docs/test", locale="en")
 
         call_args = client._execute_query.call_args
         query = call_args[0][0]
@@ -854,7 +855,7 @@ class TestWikiJSClient:
         page_response = {"pages": {"singleByPath": {"id": 1, "title": "Test"}}}
         client._execute_query = AsyncMock(return_value=page_response)
 
-        await client.get_page_by_path("docs/test", include_render=True)
+        await client.get_page_by_path("docs/test", locale="en", include_render=True)
 
         call_args = client._execute_query.call_args
         query = call_args[0][0]
@@ -882,7 +883,7 @@ class TestWikiJSClient:
         page_response = {"pages": {"singleByPath": {"id": 1, "title": "Test"}}}
         client._execute_query = AsyncMock(return_value=page_response)
 
-        await client.get_page_by_path("docs/test")
+        await client.get_page_by_path("docs/test", locale="en")
 
         call_args = client._execute_query.call_args
         query = call_args[0][0]
@@ -1264,11 +1265,11 @@ class TestWikiJSClient:
     @pytest.mark.parametrize(
         "method,args",
         [
-            ("search_pages", ["test"]),
-            ("get_page_by_path", ["docs/test"]),
+            ("search_pages", ["test", 10, "en"]),
+            ("get_page_by_path", ["docs/test", "en"]),
             ("get_page_by_id", [123]),
             ("list_pages", []),
-            ("get_page_tree", []),
+            ("get_page_tree", ["en"]),
             ("list_tags", []),
             ("get_site_info", []),
             ("get_page_history", [42]),

@@ -177,7 +177,7 @@ class TestGraphQLCompatibility:
 
         client.client.post = AsyncMock(return_value=mock_response)
 
-        result = await client.get_page_tree()
+        result = await client.get_page_tree(locale="en")
 
         # Verify tree structure
         assert len(result) == 1

@@ -85,7 +85,9 @@ class WikiJSClient:
             logger.error(f"Request failed: {str(e)}")
             raise
 
-    async def search_pages(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+    async def search_pages(
+        self, query: str, limit: int = 10, locale: str | None = None
+    ) -> list[dict[str, Any]]:
         """Search for pages by title or content."""
         graphql_query = """
         query SearchPages($query: String!, $path: String, $locale: String) {
@@ -107,7 +109,7 @@ class WikiJSClient:
         variables = {
             "query": query,
             "path": "",
-            "locale": "en",
+            "locale": locale,
         }
 
         result = await self._execute_query(graphql_query, variables)
@@ -117,7 +119,7 @@ class WikiJSClient:
     async def get_page_by_path(
         self,
         path: str,
-        locale: str = "en",
+        locale: str,
         metadata_only: bool = False,
         include_render: bool = False,
     ) -> dict[str, Any] | None:
@@ -200,9 +202,9 @@ class WikiJSClient:
 
     async def get_page_tree(
         self,
+        locale: str,
         parent_path: str = "",
         mode: str = "ALL",
-        locale: str = "en",
         parent_id: int = None,
     ) -> list[dict[str, Any]]:
         """Get page tree structure using the correct schema."""
@@ -241,9 +243,9 @@ class WikiJSClient:
         path: str,
         title: str,
         content: str,
+        locale: str,
         description: str = "",
         editor: str = "markdown",
-        locale: str = "en",
         tags: list[str] | None = None,
         is_published: bool = True,
         is_private: bool = False,
@@ -450,7 +452,7 @@ class WikiJSClient:
         return delete_result
 
     async def move_page(
-        self, page_id: int, destination_path: str, destination_locale: str = "en"
+        self, page_id: int, destination_path: str, destination_locale: str
     ) -> dict[str, Any]:
         """Move a page to a new path and/or locale."""
         graphql_query = """

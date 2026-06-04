@@ -408,7 +408,7 @@ class TestWikiJSMCPServer:
 
         # Verify default parameters were used
         mock_client_instance.get_page_tree.assert_called_once_with(
-            "", "ALL", "en", None
+            "en", "", "ALL", None
         )
 
     @patch("wikijs_mcp.server.WikiJSConfig.load_config")
@@ -443,7 +443,7 @@ class TestWikiJSMCPServer:
 
         # Verify all parameters were passed correctly
         mock_client_instance.get_page_tree.assert_called_once_with(
-            "docs/advanced", "FOLDERS", "fr", 123
+            "fr", "docs/advanced", "FOLDERS", 123
         )
 
     @patch("wikijs_mcp.server.WikiJSConfig.load_config")
@@ -525,6 +525,7 @@ class TestWikiJSMCPServer:
             content="New content",
             description="Test description",
             tags=["test", "example"],
+            locale="en",
         )
 
     @patch("wikijs_mcp.server.WikiJSConfig.load_config")

@@ -61,15 +61,22 @@ class WikiJSMCPServer:
         @self.app.tool(
             description="Full-text search across all wiki pages. Returns matching page titles, paths, and descriptions. Use this when you know keywords but not the page location."
         )
-        async def wiki_search(query: str, limit: int = 10) -> str:
+        async def wiki_search(
+            query: str, limit: int = 10, locale: str | None = None
+        ) -> str:
             """Search for pages in Wiki.js.
 
             Args:
                 query: Search query for finding pages
                 limit: Maximum number of results (default: 10)
+                locale: Locale to search in (defaults to wiki default)
             """
+            # Use default locale if not specified
+            if locale is None:
+                locale = await self._get_default_locale()
+
             async with WikiJSClient(self.config) as client:
-                results = await client.search_pages(query, limit)
+                results = await client.search_pages(query, limit, locale)
 
                 if not results:
                     return f"No pages found for query: {query}"
@@ -242,7 +249,7 @@ class WikiJSMCPServer:
                 locale = await self._get_default_locale()
 
             async with WikiJSClient(self.config) as client:
-                tree = await client.get_page_tree(parent_path, mode, locale, parent_id)
+                tree = await client.get_page_tree(locale, parent_path, mode, parent_id)
 
                 if not tree:
                     return "No pages found in tree"
@@ -268,6 +275,7 @@ class WikiJSMCPServer:
             content: str,
             description: str = "",
             tags: list[str] = None,
+            locale: str | None = None,
         ) -> str:
             """Create a new wiki page.
 
@@ -277,9 +285,14 @@ class WikiJSMCPServer:
                 content: Page content in markdown
                 description: Page description (optional)
                 tags: Page tags (optional)
+                locale: Page locale (defaults to wiki default)
             """
             if tags is None:
                 tags = []
+
+            # Use default locale if not specified
+            if locale is None:
+                locale = await self._get_default_locale()
 
             async with WikiJSClient(self.config) as client:
                 result = await client.create_page(
@@ -288,6 +301,7 @@ class WikiJSMCPServer:
                     content=content,
                     description=description,
                     tags=tags,
+                    locale=locale,
                 )
 
                 page_info = result.get("page", {})
