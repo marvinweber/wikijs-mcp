@@ -34,7 +34,10 @@ class WikiJSMCPServer:
                 "parameter — prefer this over full content replacement for small changes.\n"
                 "- Use metadata_only=True on wiki_get_page to fetch page info without content, "
                 "saving context tokens during exploration.\n"
-                "- Use wiki_list_tags to discover available tags, then filter wiki_list_pages by tag."
+                "- Use wiki_list_tags to discover available tags, then filter wiki_list_pages by tag.\n"
+                "- All tools automatically use the wiki's default locale unless you specify otherwise.\n"
+                "- Use wiki_list_locales and wiki_get_locale_config only when you need to work with "
+                "multiple locales or verify the default locale."
             ),
         )
         self._setup_tools()

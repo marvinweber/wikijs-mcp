@@ -56,6 +56,8 @@ You can substitute `pipx run wikijs-mcp` with `uvx wikijs-mcp` or install global
 | `wiki_move_page` | Move a page to a new path and/or locale |
 | `wiki_delete_page` | Delete a page |
 | `wiki_list_tags` | List all tags used across the wiki |
+| `wiki_list_locales` | List all available locales with installation status |
+| `wiki_get_locale_config` | Get the current locale configuration and default locale |
 | `wiki_get_site_info` | Get wiki site metadata (title, description, host) |
 | `wiki_get_history` | Get page edit history with pagination |
 | `wiki_get_version` | Retrieve a specific historical version of a page |
