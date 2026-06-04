@@ -149,3 +149,5 @@ Thumbs.db
 
 # Bandit security reports
 bandit-report.json
+
+inspector-config.json

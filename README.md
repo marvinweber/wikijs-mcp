@@ -66,7 +66,25 @@ You can substitute `pipx run wikijs-mcp` with `uvx wikijs-mcp` or install global
 git clone https://github.com/jaalbin24/wikijs-mcp.git
 cd wikijs-mcp
 poetry install
+
+# run mcp server
+poetry run wikijs-mcp
+
+# run tests
 poetry run pytest
+```
+
+## Debugging with MCP Inspector
+
+To debug the server interactively, use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector):
+
+```bash
+# Copy the example config and fill in your credentials
+cp inspector-config.json.example inspector-config.json
+# Edit inspector-config.json with your WIKIJS_URL and WIKIJS_API_KEY
+
+# Run the inspector
+npx @modelcontextprotocol/inspector --config inspector-config.json --server wikijs
 ```
 
 ## License

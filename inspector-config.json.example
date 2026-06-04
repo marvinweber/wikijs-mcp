@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "wikijs": {
+      "command": "poetry",
+      "args": ["run", "wikijs-mcp"],
+      "env": {
+        "WIKIJS_URL": "https://your-wikijs-server.wiki",
+        "WIKIJS_API_KEY": "ey***********"
+      }
+    }
+  }
+}
