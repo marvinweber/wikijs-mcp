@@ -42,7 +42,7 @@ class TestWikiJSMCPServer:
         server = WikiJSMCPServer()
 
         tools = await server.app.list_tools()
-        assert len(tools) == 12  # 12 wiki tools
+        assert len(tools) == 14  # 14 wiki tools
 
         tool_names = [tool.name for tool in tools]
         expected_names = [
@@ -55,6 +55,8 @@ class TestWikiJSMCPServer:
             "wiki_delete_page",
             "wiki_move_page",
             "wiki_list_tags",
+            "wiki_list_locales",
+            "wiki_get_locale_config",
             "wiki_get_site_info",
             "wiki_get_history",
             "wiki_get_version",
@@ -1403,6 +1405,275 @@ class TestWikiJSMCPServer:
             "wiki_get_version", {"page_id": 42, "version_id": 999}
         )
         assert "Version not found" in get_tool_response_text(result)
+
+    # --- wiki_list_locales tests ---
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_list_locales_success(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test list_locales with results."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.list_locales.return_value = [
+            {
+                "code": "en",
+                "name": "English",
+                "nativeName": "English",
+                "isInstalled": True,
+                "isRTL": False,
+                "availability": 100,
+                "installDate": "2024-01-01",
+            },
+            {
+                "code": "fr",
+                "name": "French",
+                "nativeName": "Français",
+                "isInstalled": True,
+                "isRTL": False,
+                "availability": 100,
+                "installDate": "2024-01-01",
+            },
+        ]
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_list_locales", {"installed": True})
+        response_text = get_tool_response_text(result)
+        assert "Found 2 installed locale(s)" in response_text
+        assert "English" in response_text
+        assert "Français" in response_text
+        assert "Code: en" in response_text
+        assert "Code: fr" in response_text
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_list_locales_filter_uninstalled(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test list_locales with installed=True filters out uninstalled locales."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.list_locales.return_value = [
+            {
+                "code": "en",
+                "name": "English",
+                "nativeName": "English",
+                "isInstalled": True,
+                "isRTL": False,
+                "availability": 100,
+            },
+            {
+                "code": "de",
+                "name": "German",
+                "nativeName": "Deutsch",
+                "isInstalled": False,
+                "isRTL": False,
+                "availability": 80,
+            },
+        ]
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_list_locales", {"installed": True})
+        response_text = get_tool_response_text(result)
+        # Should only show English (installed)
+        assert "Found 1 installed locale(s)" in response_text
+        assert "English" in response_text
+        assert "Deutsch" not in response_text
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_list_locales_show_all(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test list_locales with installed=False shows all locales."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.list_locales.return_value = [
+            {
+                "code": "en",
+                "name": "English",
+                "nativeName": "English",
+                "isInstalled": True,
+                "isRTL": False,
+                "availability": 100,
+            },
+            {
+                "code": "de",
+                "name": "German",
+                "nativeName": "Deutsch",
+                "isInstalled": False,
+                "isRTL": False,
+                "availability": 80,
+            },
+        ]
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_list_locales", {"installed": False})
+        response_text = get_tool_response_text(result)
+        # Should show both locales
+        assert "Found 2 locale(s)" in response_text
+        assert "English" in response_text
+        assert "Deutsch" in response_text
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_list_locales_default_installed(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test list_locales defaults to installed=True when not specified."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.list_locales.return_value = [
+            {
+                "code": "en",
+                "name": "English",
+                "nativeName": "English",
+                "isInstalled": True,
+                "isRTL": False,
+            }
+        ]
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_list_locales", {})
+        response_text = get_tool_response_text(result)
+        # Should show installed by default
+        assert "Found 1 installed locale(s)" in response_text
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_list_locales_empty(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test list_locales with no results."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.list_locales.return_value = []
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_list_locales", {"installed": True})
+        assert "No installed locales found" in get_tool_response_text(result)
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_list_locales_with_rtl(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test list_locales with RTL locale."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.list_locales.return_value = [
+            {
+                "code": "ar",
+                "name": "Arabic",
+                "nativeName": "العربية",
+                "isInstalled": True,
+                "isRTL": True,
+                "availability": 100,
+            }
+        ]
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_list_locales", {"installed": True})
+        response_text = get_tool_response_text(result)
+        assert "Arabic" in response_text
+        assert "العربية" in response_text
+        assert "RTL: True" in response_text
+
+    # --- wiki_get_locale_config tests ---
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_get_locale_config_success(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test get_locale_config with results."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.get_locale_config.return_value = {
+            "locale": "en",
+            "autoUpdate": True,
+            "namespacing": True,
+            "namespaces": ["common", "admin"],
+        }
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_get_locale_config", {})
+        response_text = get_tool_response_text(result)
+        assert "Locale Configuration" in response_text
+        assert "Default Locale:** en" in response_text
+        assert "Auto Update:** True" in response_text
+        assert "Namespacing:** True" in response_text
+        assert "common, admin" in response_text
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_get_locale_config_partial_data(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test get_locale_config with partial data."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.get_locale_config.return_value = {"locale": "fr"}
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_get_locale_config", {})
+        response_text = get_tool_response_text(result)
+        assert "Default Locale:** fr" in response_text
+        # Should not show autoUpdate or namespacing if not present
+        assert "Auto Update" not in response_text
+
+    @patch("wikijs_mcp.server.WikiJSConfig.load_config")
+    @patch("wikijs_mcp.server.WikiJSClient")
+    async def test_call_tool_get_locale_config_empty(
+        self, mock_client_class, mock_load_config, mock_wiki_config
+    ):
+        """Test get_locale_config with empty response."""
+        mock_load_config.return_value = mock_wiki_config
+        mock_client_instance = AsyncMock()
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+        mock_client_instance.__aexit__.return_value = None
+        mock_client_instance.get_locale_config.return_value = {}
+        mock_client_class.return_value = mock_client_instance
+
+        server = WikiJSMCPServer()
+
+        result = await server.app.call_tool("wiki_get_locale_config", {})
+        assert "Could not retrieve locale configuration" in get_tool_response_text(
+            result
+        )
 
     @patch("wikijs_mcp.server.WikiJSConfig.load_config")
     @patch("wikijs_mcp.config.WikiJSConfig.validate_config")

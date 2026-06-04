@@ -453,6 +453,71 @@ class WikiJSMCPServer:
                 return response
 
         @self.app.tool(
+            description="List all available locales in the wiki. Returns locale codes, names, and installation status. Use this to discover what locales are available before setting locale parameters in other tools."
+        )
+        async def wiki_list_locales(installed: bool = True) -> str:
+            """List all available locales.
+
+            Returns all locales configured in the wiki with their installation status,
+            native names, and RTL (right-to-left) support information.
+
+            Args:
+                installed: Filter to only show installed locales (default: true)
+            """
+            async with WikiJSClient(self.config) as client:
+                locales = await client.list_locales()
+
+                # Filter by installation status if requested
+                if installed:
+                    locales = [loc for loc in locales if loc.get("isInstalled", False)]
+
+                if not locales:
+                    return f"No {'installed ' if installed else ''}locales found"
+
+                response = f"Found {len(locales)} {'installed ' if installed else ''}locale(s):\n\n"
+                for locale in locales:
+                    response += f"**{locale.get('nativeName', locale.get('name', 'Unknown'))}**\n"
+                    response += f"Code: {locale.get('code', 'Unknown')}\n"
+                    response += f"Name: {locale.get('name', 'Unknown')}\n"
+                    response += f"Installed: {locale.get('isInstalled', False)}\n"
+                    if locale.get("isRTL"):
+                        response += f"RTL: {locale['isRTL']}\n"
+                    if locale.get("availability") is not None:
+                        response += f"Availability: {locale['availability']}\n"
+                    if locale.get("installDate"):
+                        response += f"Installed: {locale['installDate']}\n"
+                    response += "\n"
+
+                return response
+
+        @self.app.tool(
+            description="Get the current locale configuration of the wiki. Returns the default/active locale and localization settings. Use this to determine the default locale for other operations."
+        )
+        async def wiki_get_locale_config() -> str:
+            """Get the current locale configuration.
+
+            Returns the wiki's default locale and localization settings including
+            auto-update status and namespace configuration.
+            """
+            async with WikiJSClient(self.config) as client:
+                config = await client.get_locale_config()
+
+                if not config:
+                    return "Could not retrieve locale configuration"
+
+                response = "**Locale Configuration:**\n\n"
+                if config.get("locale"):
+                    response += f"**Default Locale:** {config['locale']}\n"
+                if config.get("autoUpdate") is not None:
+                    response += f"**Auto Update:** {config['autoUpdate']}\n"
+                if config.get("namespacing") is not None:
+                    response += f"**Namespacing:** {config['namespacing']}\n"
+                if config.get("namespaces"):
+                    response += f"**Namespaces:** {', '.join(config['namespaces'])}\n"
+
+                return response
+
+        @self.app.tool(
             description="Get Wiki.js site metadata including title, description, and host URL. Useful for understanding which wiki instance you are connected to."
         )
         async def wiki_get_site_info() -> str:

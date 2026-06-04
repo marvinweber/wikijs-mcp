@@ -586,3 +586,42 @@ class WikiJSClient:
         variables = {"pageId": page_id, "versionId": version_id}
         result = await self._execute_query(graphql_query, variables)
         return result.get("pages", {}).get("version")
+
+    async def list_locales(self) -> list[dict[str, Any]]:
+        """List all available locales with their installation status."""
+        graphql_query = """
+        query ListLocales {
+            localization {
+                locales {
+                    code
+                    name
+                    nativeName
+                    isInstalled
+                    isRTL
+                    availability
+                    createdAt
+                    installDate
+                    updatedAt
+                }
+            }
+        }
+        """
+        result = await self._execute_query(graphql_query)
+        return result.get("localization", {}).get("locales", [])
+
+    async def get_locale_config(self) -> dict[str, Any]:
+        """Get the current locale configuration."""
+        graphql_query = """
+        query GetLocaleConfig {
+            localization {
+                config {
+                    locale
+                    autoUpdate
+                    namespacing
+                    namespaces
+                }
+            }
+        }
+        """
+        result = await self._execute_query(graphql_query)
+        return result.get("localization", {}).get("config", {})

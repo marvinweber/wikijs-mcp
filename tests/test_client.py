@@ -1129,6 +1129,136 @@ class TestWikiJSClient:
 
         assert result is None
 
+    # --- locale tests ---
+
+    async def test_list_locales_success(self, mock_wiki_config):
+        """Test successful locale listing."""
+        client = WikiJSClient(mock_wiki_config)
+
+        locales_response = {
+            "localization": {
+                "locales": [
+                    {
+                        "code": "en",
+                        "name": "English",
+                        "nativeName": "English",
+                        "isInstalled": True,
+                        "isRTL": False,
+                        "availability": 100,
+                        "createdAt": "2024-01-01T00:00:00Z",
+                        "installDate": "2024-01-01T00:00:00Z",
+                        "updatedAt": "2024-01-01T00:00:00Z",
+                    },
+                    {
+                        "code": "fr",
+                        "name": "French",
+                        "nativeName": "Français",
+                        "isInstalled": True,
+                        "isRTL": False,
+                        "availability": 100,
+                        "createdAt": "2024-01-01T00:00:00Z",
+                        "installDate": "2024-01-01T00:00:00Z",
+                        "updatedAt": "2024-01-01T00:00:00Z",
+                    },
+                    {
+                        "code": "de",
+                        "name": "German",
+                        "nativeName": "Deutsch",
+                        "isInstalled": False,
+                        "isRTL": False,
+                        "availability": 80,
+                        "createdAt": "2024-01-01T00:00:00Z",
+                        "installDate": None,
+                        "updatedAt": "2024-01-01T00:00:00Z",
+                    },
+                ]
+            }
+        }
+
+        client._execute_query = AsyncMock(return_value=locales_response)
+        result = await client.list_locales()
+
+        assert len(result) == 3
+        assert result[0]["code"] == "en"
+        assert result[0]["isInstalled"] is True
+        assert result[1]["code"] == "fr"
+        assert result[2]["code"] == "de"
+        assert result[2]["isInstalled"] is False
+
+        # Verify correct query
+        call_args = client._execute_query.call_args
+        assert "ListLocales" in call_args[0][0]
+        assert "localization" in call_args[0][0]
+        assert "locales" in call_args[0][0]
+
+    async def test_list_locales_empty(self, mock_wiki_config):
+        """Test list_locales with no locales."""
+        client = WikiJSClient(mock_wiki_config)
+
+        client._execute_query = AsyncMock(return_value={"localization": {"locales": []}})
+        result = await client.list_locales()
+
+        assert result == []
+
+    async def test_list_locales_missing_data(self, mock_wiki_config):
+        """Test list_locales with missing data."""
+        client = WikiJSClient(mock_wiki_config)
+
+        client._execute_query = AsyncMock(return_value={})
+        result = await client.list_locales()
+
+        assert result == []
+
+    async def test_get_locale_config_success(self, mock_wiki_config):
+        """Test successful locale config retrieval."""
+        client = WikiJSClient(mock_wiki_config)
+
+        config_response = {
+            "localization": {
+                "config": {
+                    "locale": "en",
+                    "autoUpdate": True,
+                    "namespacing": True,
+                    "namespaces": ["common", "admin"],
+                }
+            }
+        }
+
+        client._execute_query = AsyncMock(return_value=config_response)
+        result = await client.get_locale_config()
+
+        assert result["locale"] == "en"
+        assert result["autoUpdate"] is True
+        assert result["namespacing"] is True
+        assert result["namespaces"] == ["common", "admin"]
+
+        # Verify correct query
+        call_args = client._execute_query.call_args
+        assert "GetLocaleConfig" in call_args[0][0]
+        assert "localization" in call_args[0][0]
+        assert "config" in call_args[0][0]
+
+    async def test_get_locale_config_empty(self, mock_wiki_config):
+        """Test get_locale_config with empty response."""
+        client = WikiJSClient(mock_wiki_config)
+
+        client._execute_query = AsyncMock(return_value={})
+        result = await client.get_locale_config()
+
+        assert result == {}
+
+    async def test_get_locale_config_partial_data(self, mock_wiki_config):
+        """Test get_locale_config with partial data."""
+        client = WikiJSClient(mock_wiki_config)
+
+        config_response = {"localization": {"config": {"locale": "fr"}}}
+        client._execute_query = AsyncMock(return_value=config_response)
+        result = await client.get_locale_config()
+
+        assert result["locale"] == "fr"
+        assert "autoUpdate" not in result
+        assert "namespacing" not in result
+
     # --- parametrized missing data test ---
 
     @pytest.mark.parametrize(
@@ -1143,6 +1273,8 @@ class TestWikiJSClient:
             ("get_site_info", []),
             ("get_page_history", [42]),
             ("get_page_version", [42, 1]),
+            ("list_locales", []),
+            ("get_locale_config", []),
         ],
     )
     async def test_methods_handle_missing_data(self, mock_wiki_config, method, args):
