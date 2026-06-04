@@ -165,3 +165,24 @@ def clean_env():
             os.environ[var] = value
         elif var in os.environ:
             del os.environ[var]
+
+
+@pytest.fixture(autouse=True)
+def mock_default_locale(monkeypatch):
+    """Mock _get_default_locale to return 'en' for all tests.
+
+    This fixture automatically patches the _get_default_locale method
+    to return 'en' without making async calls, making tests faster and
+    simpler.
+    """
+    import asyncio
+
+    async def mock_get_default_locale(self):
+        return "en"
+
+    # Patch the method on the WikiJSMCPServer class
+    import wikijs_mcp.server
+    monkeypatch.setattr(
+        "wikijs_mcp.server.WikiJSMCPServer._get_default_locale",
+        mock_get_default_locale,
+    )

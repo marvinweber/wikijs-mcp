@@ -1,6 +1,7 @@
 """WikiJS MCP Server."""
 
 import asyncio
+import functools
 import logging
 
 from mcp.server import FastMCP
@@ -37,6 +38,22 @@ class WikiJSMCPServer:
             ),
         )
         self._setup_tools()
+
+    @functools.cache
+    async def _get_default_locale(self) -> str:
+        """Get the default locale from the wiki.
+
+        Results are cached for the server lifetime using @functools.cache.
+
+        Returns:
+            The default locale code (e.g., 'en', 'fr').
+        """
+        async with WikiJSClient(self.config) as client:
+            config = await client.get_locale_config()
+            default_locale = config.get("locale", "en")
+
+        logger.debug(f"Default locale fetched: {default_locale}")
+        return default_locale
 
     def _setup_tools(self):
         """Setup MCP tools."""
@@ -77,7 +94,7 @@ class WikiJSMCPServer:
         async def wiki_get_page(
             path: str | None = None,
             id: int | None = None,
-            locale: str = "en",
+            locale: str | None = None,
             metadata_only: bool = False,
             include_render: bool = False,
         ) -> str:
@@ -86,10 +103,14 @@ class WikiJSMCPServer:
             Args:
                 path: Page path (e.g., 'docs/getting-started'). Use either path OR id, not both.
                 id: Page ID. Use either path OR id, not both.
-                locale: Page locale (default: 'en'). Only used with path.
+                locale: Page locale (defaults to wiki default). Only used with path.
                 metadata_only: If True, skip page content to save context tokens (default: False).
                 include_render: If True, include rendered HTML output (default: False).
             """
+            # Use default locale if not specified
+            if locale is None:
+                locale = await self._get_default_locale()
+
             # Validate that exactly one of path or id is provided
             has_path = path is not None
             has_id = id is not None
@@ -205,7 +226,7 @@ class WikiJSMCPServer:
         async def wiki_get_tree(
             parent_path: str = "",
             mode: str = "ALL",
-            locale: str = "en",
+            locale: str | None = None,
             parent_id: int | None = None,
         ) -> str:
             """Get wiki page tree structure.
@@ -213,9 +234,13 @@ class WikiJSMCPServer:
             Args:
                 parent_path: Parent path to get tree from (default: root)
                 mode: Tree mode - ALL, FOLDERS, or PAGES (default: ALL)
-                locale: Page locale (default: 'en')
+                locale: Page locale (defaults to wiki default)
                 parent_id: Parent page ID (optional)
             """
+            # Use default locale if not specified
+            if locale is None:
+                locale = await self._get_default_locale()
+
             async with WikiJSClient(self.config) as client:
                 tree = await client.get_page_tree(parent_path, mode, locale, parent_id)
 
@@ -389,15 +414,19 @@ class WikiJSMCPServer:
             description="Move a wiki page to a new path and/or locale. The page retains its numeric ID. Use this to reorganize the wiki hierarchy."
         )
         async def wiki_move_page(
-            id: int, destination_path: str, destination_locale: str = "en"
+            id: int, destination_path: str, destination_locale: str | None = None
         ) -> str:
             """Move a wiki page to a new path and/or locale.
 
             Args:
                 id: Page ID to move
                 destination_path: New path for the page (e.g., 'docs/moved-page')
-                destination_locale: New locale for the page (default: 'en')
+                destination_locale: New locale for the page (defaults to wiki default)
             """
+            # Use default locale if not specified
+            if destination_locale is None:
+                destination_locale = await self._get_default_locale()
+
             async with WikiJSClient(self.config) as client:
                 # Get the current page info for the response
                 current_page = await client.get_page_by_id(id)
