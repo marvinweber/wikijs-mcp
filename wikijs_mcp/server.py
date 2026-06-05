@@ -1,7 +1,6 @@
 """WikiJS MCP Server."""
 
 import asyncio
-import functools
 import logging
 
 from mcp.server import FastMCP
@@ -40,22 +39,26 @@ class WikiJSMCPServer:
                 "multiple locales or verify the default locale."
             ),
         )
+        self._cached_default_locale: str | None = None
         self._setup_tools()
 
-    @functools.cache
     async def _get_default_locale(self) -> str:
         """Get the default locale from the wiki.
 
-        Results are cached for the server lifetime using @functools.cache.
+        Results are cached for the server lifetime in _cached_default_locale.
 
         Returns:
             The default locale code (e.g., 'en', 'fr').
         """
+        if self._cached_default_locale is not None:
+            return self._cached_default_locale
+
         async with WikiJSClient(self.config) as client:
             config = await client.get_locale_config()
             default_locale = config.get("locale", "en")
 
         logger.debug(f"Default locale fetched: {default_locale}")
+        self._cached_default_locale = default_locale
         return default_locale
 
     def _setup_tools(self):
